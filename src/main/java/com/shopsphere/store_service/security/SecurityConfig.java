@@ -22,10 +22,12 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        // 1. ADD THIS: Allow the internal Feign call (Owner ID lookup) without a role
                         .requestMatchers("/api/stores/*/owner").permitAll()
-                        // 2. Keep the rest of your store management secure
-                        .requestMatchers("/api/stores/**").hasAnyRole("STORE_OWNER", "PLATFORM_ADMIN")
+
+                        // FIX: Added the exact "/api/stores" path so Postman doesn't get blocked!
+                        .requestMatchers("/api/stores", "/api/stores/**").hasAnyAuthority("ROLE_STORE_OWNER", "ROLE_PLATFORM_ADMIN")
+                        .requestMatchers("/error").permitAll()
+
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session

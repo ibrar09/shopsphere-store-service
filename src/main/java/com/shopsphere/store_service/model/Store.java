@@ -4,9 +4,6 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 
@@ -23,7 +20,6 @@ import java.time.Instant;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@EntityListeners(AuditingEntityListener.class) // Spring Data JPA Auditing
 @SQLDelete(sql = "UPDATE stores SET status = 'DELETED' WHERE id = ?") // Soft Delete
 @SQLRestriction("status <> 'DELETED'") // Hibernate 6.3+ (use @Where for older versions)
 public class Store {
@@ -62,13 +58,11 @@ public class Store {
     @Column(nullable = false, length = 20)
     private StoreStatus status;
 
-    // --- AUDITING FIELDS ---
+    // --- AUDITING FIELDS (MANUAL TIMESTAMPS) ---
 
-    @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
-    @LastModifiedDate
     @Column(name = "updated_at")
     private Instant updatedAt;
 
@@ -79,6 +73,14 @@ public class Store {
         if (this.status == null) {
             this.status = StoreStatus.PENDING;
         }
+        // FIX: Manually generate the timestamps right before saving!
+        this.createdAt = Instant.now();
+        this.updatedAt = Instant.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = Instant.now();
     }
 
     // Safe equals and hashCode relying only on the DB ID
