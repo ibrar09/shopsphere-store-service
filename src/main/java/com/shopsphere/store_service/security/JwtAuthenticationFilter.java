@@ -33,19 +33,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        // TRACER 1: Print the exact path being hit
-        System.out.println(">>> [STORE-SERVICE] Request incoming for path: " + request.getRequestURI());
         String authHeader = request.getHeader("Authorization");
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            // TRACER 2: Find out if the Gateway is eating your header
-            System.out.println(">>> [STORE-SERVICE] BLOCKED: No valid Bearer token found in headers.");
             filterChain.doFilter(request, response);
             return;
         }
 
         try {
-            System.out.println(">>> [STORE-SERVICE] Bearer token found! Attempting decryption...");
             String token = authHeader.substring(7);
 
             Claims claims = Jwts.parser()
@@ -54,27 +49,27 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     .parseSignedClaims(token)
                     .getPayload();
 
+            // FIX 1: Strip "ROLE_" if it already exists so we don't get ROLE_ROLE_STORE_OWNER
             String role = claims.get("role", String.class);
             if (role != null && role.startsWith("ROLE_")) {
                 role = role.substring(5);
             }
 
+            // FIX 2: Safely parse the Integer into a Long so it stops crashing!
             Number userIdNumber = claims.get("userId", Number.class);
             Long userId = (userIdNumber != null) ? userIdNumber.longValue() : null;
 
-            String finalAuthority = "ROLE_" + role;
-
-            // TRACER 3: Confirm exact authorities
-            System.out.println(">>> [STORE-SERVICE] SUCCESS: Token decrypted! UserID: " + userId + " | Authority: " + finalAuthority);
-
             UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                    userId, null, Collections.singletonList(new SimpleGrantedAuthority(finalAuthority))
+                    userId,
+                    null,
+                    Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role))
             );
+
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
         } catch (Exception e) {
-            System.err.println(">>> [STORE-SERVICE] FATAL JWT ERROR: " + e.getMessage());
-            e.printStackTrace();
+            // FIX 3: Print the actual error so it stops failing silently!
+            System.err.println("STORE SERVICE JWT FILTER ERROR: " + e.getMessage());
             SecurityContextHolder.clearContext();
         }
 

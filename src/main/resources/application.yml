@@ -9,24 +9,26 @@ spring:
       enabled: false
 
   datasource:
-    url: ${DB_URL:jdbc:postgresql://postgres-store:5432/store_db}
-    username: ${DB_USER:root}
-    password: ${DB_PASSWORD:password}
+    url: ${STORE_DB_URL:jdbc:postgresql://localhost:5437/store_db}
+    username: ${STORE_DB_USER:root}
+    password: ${STORE_DB_PASSWORD:password}
     driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
       ddl-auto: update
     show-sql: true
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
 
 eureka:
   client:
     service-url:
-      defaultZone: ${EUREKA_URL:http://eureka-server:8761/eureka/}
+      defaultZone: ${STORE_EUREKA_URL:http://localhost:8761/eureka/}
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    # Forces the exact hostname so the Gateway inside Docker can find it
+    hostname: host.docker.internal
+    prefer-ip-address: false
 
 jwt:
   secret: ${JWT_SECRET:ShopSphereSuperSecretKeyForJwtGenerationDoNotShare}
-
